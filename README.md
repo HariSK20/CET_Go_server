@@ -17,11 +17,9 @@ Simple Flask server for project
 
 	Values needed:
 
-		1. src
-
-		1. dest
-
-		1. dept
+	1. src
+	1. dest
+	1. dept
 
 1. /login and /logout 
 
@@ -29,9 +27,8 @@ Simple Flask server for project
 
 	Values needed
 	
-		1. username
-
-		1. password
+	1. username
+	1. password
 
 1. /events 
 	
@@ -41,11 +38,9 @@ Simple Flask server for project
 
 		Values needed:
 
-			1. id: user id of creator
-
-			1. Operation: Create/List/Update/Delete
-
-			1. data for the event
+		1. id: user id of creator
+		1. Operation: Create/List/Update/Delete
+		1. data for the event
 
 1. /organizer/\<code\>
 

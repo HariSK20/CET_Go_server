@@ -74,7 +74,7 @@ class Floor(Resource):
                 res['rooms'].append({'ID': i[0], 'x':i[1], 'y':i[2], 'z':i[3], 'Description': i[4], 'fx':i[5], 'fy':i[6]})
         except Exception as e:
             print(e)
-            res['message': e]
+            res['message'] = e
         finally:
             cur.close()
         return jsonify(res)

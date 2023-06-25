@@ -343,7 +343,8 @@ class Organizer(Resource):
                         data['profile'] = {'image': image, 'image_extension': image_extension}
             else:
                 data['message'] = 'Invalid request!'
-        return(jsonify(data)) 
+        return(jsonify(data))
+    @login_required 
     def post(self):
         try:
             data = request.get_json()     # status code
@@ -355,18 +356,18 @@ class Organizer(Resource):
             data['profile_image'] = request.form.get('profile_image')
             data['about'] = request.form.get('about')
         # break
-        insert_query = "UPDATE organizers SET displayname=%s, password=%s, profile_image=%s, about=%s WHERE id=%s"
-        cur.execute(insert_query, (data['displayname'], data['password'], data['profile_image'], data['about'], data['id']))
-        # check if insertion was successful
-        if(cur.rowcount > 0):
-            print("successful updation of organizer {}".format(data['id']))
-            # commit the transaction
-            conn.commit()
-            return( jsonify({'message': 'Organizer {} successfully updated!'.format(data['id'])}))
-        else:
-            message = "Unable to update organizer '{}'!".format(data['id'])
+        if(data['id'] == current_user):
+            insert_query = "UPDATE organizers SET displayname=%s, password=%s, profile_image=%s, about=%s WHERE id=%s"
+            cur.execute(insert_query, (data['displayname'], data['password'], data['profile_image'], data['about'], data['id']))
+            # check if insertion was successful
+            if(cur.rowcount > 0):
+                print("successful updation of organizer {}".format(data['id']))
+                # commit the transaction
+                conn.commit()
+                return( jsonify({'message': 'Organizer {} successfully updated!'.format(data['id'])}))
+            else:
+                message = "Unable to update organizer '{}'!".format(data['id'])
         return(jsonify(data)) 
-        pass
 
 
 class User(UserMixin):

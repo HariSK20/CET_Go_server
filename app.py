@@ -55,16 +55,25 @@ class Welcome(Resource):
         return(jsonify({'message': 'HELLO!!'}))
 
 
-class FloorMap(Resource):
+class Floor(Resource):
     """
         Class for getting details of floors of a building
     """
     def get(self, code):
         global conn
-        res = {'src': resources['floorMaps'][code[:-1].upper()][int(code[-1])]}
+        # res = {'src': resources['floorMaps'][code[:-1].upper()][int(code[-1])]}
+        splitted = code.split('_')
+        floor_id = 'all'
+        if(len(splitted) > 1):
+            floor_id = splitted[-1]
+        dept_id = splitted[0]
+        res = {'dept': dept_id, 'floor': floor_id}
         cur = conn.cursor()
         res['rooms'] = []
-        cur.execute("SELECT * FROM {} where z='{}'".format(code[:-1], code[-1]))
+        if(floor_id == 'all'):
+            cur.execute("SELECT * FROM {}".format(dept_id))
+        else:
+            cur.execute("SELECT * FROM {} where z='{}'".format(dept_id, floor_id))
         for i in cur.fetchall():
             res['rooms'].append({'ID': i[0], 'x':i[1], 'y':i[2], 'z':i[3], 'Description': i[4], 'fx':i[5], 'fy':i[6]})
         cur.close()
@@ -457,7 +466,7 @@ class Departments(Resource):
 
 # adding the defined resources along with their corresponding urls
 api.add_resource(Welcome, '/')
-api.add_resource(FloorMap, '/floors/<string:code>')
+api.add_resource(Floor, '/floors/<string:code>')
 api.add_resource(FloorMapFile, '/floorplan/<string:code>')
 api.add_resource(Graph, '/shortestpath')
 api.add_resource(Event, '/events')

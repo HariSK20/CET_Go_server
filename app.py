@@ -13,14 +13,6 @@ import base64
 import os
 
 
-resources = {
-    "floorMaps": {
-        "CE": ['https://github.com/HariSK20/CETGo_Data/raw/main/CE0.png', 'https://github.com/HariSK20/CETGo_Data/raw/main/CE1.png', ], 
-        "CSE": ['https://github.com/HariSK20/CETGo_Data/raw/main/cs0.svg', 'https://raw.githubusercontent.com/HariSK20/CETGo_Data/main/cs1.svg', 'https://github.com/HariSK20/CETGo_Data/raw/main/cs2.svg'],
-        "MCA": ['none exists!']
-    }
-}
-
 # get credentials
 config = dict(dotenv_values("../cred.env"))
 # print(config)

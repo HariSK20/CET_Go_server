@@ -70,11 +70,14 @@ class Floor(Resource):
         res = {'dept': dept_id, 'floor': floor_id}
         cur = conn.cursor()
         res['rooms'] = []
-        if(floor_id == 'all'):
-            cur.execute("SELECT * FROM {}".format(dept_id))
-        else:
-            cur.execute("SELECT * FROM {} where z='{}'".format(dept_id, floor_id))
+        query = "SELECT * FROM {}".format(dept_id)
+        if(floor_id != 'all'):
+            query += " where z=' {}'".format(floor_id)
+        # print(query)
+        cur.execute(query)
+        # print(cur.fetchall())
         for i in cur.fetchall():
+            # print(i)
             res['rooms'].append({'ID': i[0], 'x':i[1], 'y':i[2], 'z':i[3], 'Description': i[4], 'fx':i[5], 'fy':i[6]})
         cur.close()
         return jsonify(res)
@@ -90,8 +93,10 @@ class FloorMapFile(Resource):
     """
     def get(self, code):
         path = '../CETGo_Data/'+ code + '.svg'
-        return send_file(path, mimetype='image/svg+xml')
-
+        if(os.path.isfile(path)):
+            return send_file(path, mimetype='image/svg+xml')
+        else:
+            return jsonify({'file': code, 'message': 'does not exist'})
 
 class Graph(Resource):
     """ 

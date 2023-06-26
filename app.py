@@ -38,6 +38,8 @@ app.config['SECRET_KEY'] = 'mysecretkey'
 login_manager.init_app(app)
 
 conn = psql.connect(dbname=psql_db, user=psql_usr, password=psql_pass, host=psql_host, port=psql_port)
+
+depts = ['cse', 'mca', 'ce1', 'ce2', 'eee', 'arch', 'me1', 'me2', 'ec1', 'ec2']
         
 class Welcome(Resource):
     """ 
@@ -464,6 +466,23 @@ class Departments(Resource):
             # data['Error'] = 'Invalid request!'
         return(jsonify(data)) 
 
+class FuzzyPoint(Resource):
+    def get(self, value):
+        data = {'id': value.strip(), 'res': []}
+        for dept in depts + ['depts']:
+            query = "SELECT * FROM {} WHERE SIMILARITY(id,'{}') > 0.4 OR SIMILARITY(val,'{}') > 0.4 LIMIT 5".format(dept, value.strip(), value.strip())
+            with conn.cursor() as cur:
+                try:
+                    cur.execute(query)
+                    res = cur.fetchall()
+                    for i in res:
+                        data['res'].append({'id': i[0], 'x': i[1], 'y': i[2], 'z': i[3], 'val': i[4], 'fx': i[5], 'fy': i[6]})                
+                except Exception as e:
+                    print(e)
+                    pass
+                    cur.close()
+        return(jsonify(data))
+
 
 # adding the defined resources along with their corresponding urls
 api.add_resource(Welcome, '/')
@@ -476,7 +495,7 @@ api.add_resource(Protected, '/protected')
 api.add_resource(Logout, '/logout')
 api.add_resource(Organizer, '/organizer/<string:name>')
 api.add_resource(Departments, '/depts')
-
+api.add_resource(FuzzyPoint, '/point/<string:value>')
 # driver function
 if __name__ == '__main__':
     app.run(debug = True)

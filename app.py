@@ -77,6 +77,7 @@ class Floor(Resource):
             except Exception as e:
                 print(e)
                 res['message'] = e
+            finally:
                 cur.close()
         return jsonify(res)
     # Corresponds to POST request
@@ -146,6 +147,8 @@ class Graph(Resource):
                     data['path'] = result
                 except Exception as e:
                     data['message'] = e
+                finally:
+                    cur.close()
         graphDB_Driver.close()
         return(jsonify(data))
 
@@ -189,6 +192,8 @@ class Event(Resource):
                     data['events'].append({'event_id': i[0], 'datetime':i[2],  'title':i[3], 'description': i[4], 'location':i[5], 'image': image, 'image_extension': image_extension})
             except Exception as e:
                 data['message'] = e
+            finally:
+                cur.close()
         # else:
             # data['Error'] = 'Invalid request!'
         return(jsonify(data)) 
@@ -238,8 +243,12 @@ class Event(Resource):
                         return jsonify({'Error': 'Invalid user ID', 'message': 'User ID not found!'}), 201
                 except Exception as e:
                     message = e
+                    output['message'] = e
                     return(output)
                     cur.close()
+                finally:
+                    cur.close()
+
             if(data['Operation'] == 'List'):
                 # List events
                 with conn.cursor() as cur:
@@ -263,7 +272,11 @@ class Event(Resource):
                             data['events'].append({'event_id': i[0], 'datetime':i[2],  'title':i[3], 'description': i[4], 'location':i[5], 'image': image, 'image_extension': image_extension})
                     except Exception as e:
                         message = e
+                        output['message'] = e
+                        cur.close()                        
                         return(output)
+                    finally:
+                        cur.close()                        
 
             elif(data['Operation'] == 'Create'):
                 # Create new event
@@ -303,9 +316,12 @@ class Event(Resource):
                             message = "Unable to create event '{}'!".format(data['title'])
                     except Exception as e:
                         message = e
-                        return(output)
+                        output['message'] = e
+                        print(e)
                         cur.close()
-
+                        return(output)
+                    finally:
+                        cur.close()
 
             elif(data['Operation'] == 'Update'):
                 # break
@@ -341,7 +357,10 @@ class Event(Resource):
                             message = "Unable to update event '{}'!".format(data['title'])
                     except Exception as e:
                         message = e
+                        cur.close()
+                        output['message'] = e
                         return(output)
+                    finally:
                         cur.close()
 
             elif(data['Operation'] == 'Delete'):
@@ -355,7 +374,11 @@ class Event(Resource):
                             message = 'Error, Unable to delete event!'
                     except Exception as e:
                         message = e
+                        print(e)
+                        output['message'] = e
+                        cur.close()
                         return(output)
+                    finally:
                         cur.close()
             else: 
                 message = 'Invalid Operation Specified'
@@ -390,6 +413,9 @@ class Organizer(Resource):
                 # message = e
                 # return(output)
                 cur.close()
+            finally:
+                cur.close()
+
         return(jsonify(data))
 
     @login_required 
@@ -526,8 +552,10 @@ class FuzzyPoint(Resource):
                         data['res'].append({'id': i[0], 'x': i[1], 'y': i[2], 'z': i[3], 'val': i[4], 'fx': i[5], 'fy': i[6]})                
                 except Exception as e:
                     print(e)
-                    pass
                     cur.close()
+                finally:
+                    cur.close()
+
         return(jsonify(data))
 
 

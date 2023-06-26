@@ -228,7 +228,7 @@ class Event(Resource):
             data['location'] = request.form.get('location')
             data['image'] = request.form.get('image')
             data['image_extension'] = request.form.get('image_extension')
-        # print(data)
+        print(data)
         message = "received"
         if('Operation' in data.keys()):
             # to be used after login code is complete

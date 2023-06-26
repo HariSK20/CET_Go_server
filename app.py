@@ -60,23 +60,21 @@ class Floor(Resource):
             floor_id = splitted[-1]
         dept_id = splitted[0]
         res = {'dept': dept_id, 'floor': floor_id}
-        cur = conn.cursor()
-        res['rooms'] = []
-        query = "SELECT * FROM {}".format(dept_id)
-        if(floor_id != 'all'):
-            query += " where z=' {}'".format(floor_id)
-        # print(query)
-        try:
-            cur.execute(query)
-            # print(cur.fetchall())
-            for i in cur.fetchall():
-                # print(i)
-                res['rooms'].append({'ID': i[0], 'x':i[1], 'y':i[2], 'z':i[3], 'Description': i[4], 'fx':i[5], 'fy':i[6]})
-        except Exception as e:
-            print(e)
-            res['message'] = e
-        finally:
-            cur.close()
+        with conn.cursor() as cur:
+            res['rooms'] = []
+            query = "SELECT * FROM {}".format(dept_id)
+            if(floor_id != 'all'):
+                query += " where z='{}'".format(floor_id)
+            print(query)
+            try:
+                cur.execute(query)
+                # print(cur.fetchall())
+                for i in cur.fetchall():
+                    # print(i)
+                    res['rooms'].append({'ID': i[0], 'x':i[1], 'y':i[2], 'z':i[3], 'Description': i[4], 'fx':i[5], 'fy':i[6]})
+            except Exception as e:
+                print(e)
+                res['message'] = e
         return jsonify(res)
     # Corresponds to POST request
     def post(self):

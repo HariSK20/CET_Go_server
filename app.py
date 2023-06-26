@@ -77,6 +77,7 @@ class Floor(Resource):
             except Exception as e:
                 print(e)
                 res['message'] = e
+                cur.close()
         return jsonify(res)
     # Corresponds to POST request
     def post(self):
@@ -109,39 +110,42 @@ class Graph(Resource):
         with graphDB_Driver.session() as graphDB_Session:
             with conn.cursor() as cur:
                 # check if both starting and destination points are in the db first
-                cur.execute("select id from {} where id='{}' or id='{}'".format(data['dept'], data['src'], data['dest']))
-                s = cur.fetchall()
-                if(len(s) != 2):
-                    message = ''
-                    yes= [0, 0]
-                    for i in s:
-                        if(i[0] == data['src']):
-                            yes[0] = 1
-                        elif(i[0] == data['dest']):
-                            yes[1] = 1
-                    message = "Unable to find {} {} in {}".format("" if yes[0] == 1 else data['src'], "" if yes[1] == 1 else data['dest'], data['dept'])
-                    return(jsonify({'Error': 'Invalid rooms!', 'message': message}))
-                # checking if the nodes where returned correctly
-                query = "match (p1:room {{id: '{0}'}}), (p2:room {{id: '{1}'}}), path = shortestPath((p1)-[*..15]-(p2)) return path".format(data['src'], data['dest'])
-                res = graphDB_Session.run(query)
-                # for i in list(res):
-                #     print(i.data())
-                # print(list(res.data()))
-                query = "select id, val, fx, fy, z from {} where id=".format(data['dept'])
-                dc = res.data()[0]
-                for i in dc['path']:
-                    if( not isinstance(i, dict)):
-                        continue
-                    # because using tupled call of cur.execute is giving error
-                    q2 = query[:] + "'{}'".format(i['id'])
-                    # cur.execute(query, (str(i['id'])))
-                    cur.execute(q2)
-                    q = cur.fetchone()
-                    if(q == None):
-                        return jsonify({'Error': "Unable to find room", 'message': 'Unable to find {} in {}.'.format(i['id'], data['dept'])})
-                    result.append({'id': i['id'], 'desc': q[1].strip(), 'fx': str(q[2]), 'fy': str(q[3]), 'z': q[4]})
-                    # print(result)
-                data['path'] = result
+                try:
+                    cur.execute("select id from {} where id='{}' or id='{}'".format(data['dept'], data['src'], data['dest']))
+                    s = cur.fetchall()
+                    if(len(s) != 2):
+                        message = ''
+                        yes= [0, 0]
+                        for i in s:
+                            if(i[0] == data['src']):
+                                yes[0] = 1
+                            elif(i[0] == data['dest']):
+                                yes[1] = 1
+                        message = "Unable to find {} {} in {}".format("" if yes[0] == 1 else data['src'], "" if yes[1] == 1 else data['dest'], data['dept'])
+                        return(jsonify({'Error': 'Invalid rooms!', 'message': message}))
+                    # checking if the nodes where returned correctly
+                    query = "match (p1:room {{id: '{0}'}}), (p2:room {{id: '{1}'}}), path = shortestPath((p1)-[*..15]-(p2)) return path".format(data['src'], data['dest'])
+                    res = graphDB_Session.run(query)
+                    # for i in list(res):
+                    #     print(i.data())
+                    # print(list(res.data()))
+                    query = "select id, val, fx, fy, z from {} where id=".format(data['dept'])
+                    dc = res.data()[0]
+                    for i in dc['path']:
+                        if( not isinstance(i, dict)):
+                            continue
+                        # because using tupled call of cur.execute is giving error
+                        q2 = query[:] + "'{}'".format(i['id'])
+                        # cur.execute(query, (str(i['id'])))
+                        cur.execute(q2)
+                        q = cur.fetchone()
+                        if(q == None):
+                            return jsonify({'Error': "Unable to find room", 'message': 'Unable to find {} in {}.'.format(i['id'], data['dept'])})
+                        result.append({'id': i['id'], 'desc': q[1].strip(), 'fx': str(q[2]), 'fy': str(q[3]), 'z': q[4]})
+                        # print(result)
+                    data['path'] = result
+                except Exception as e:
+                    data['message'] = e
         graphDB_Driver.close()
         return(jsonify(data))
 
@@ -170,18 +174,21 @@ class Event(Resource):
         # # message = "received"
         # if('List' in data.keys()):
         with conn.cursor() as cur:
-            cur.execute("select * from events where id not in ('0')")
-            res = cur.fetchall()
-            result = {}
-            data['count'] = len(res)
-            data['events'] = []
-            for i in res:
-                image = ""
-                image_extension = ""
-                if(i[6]): 
-                    image = bytes(i[6]).decode('utf-8')
-                    image_extension = i[7]
-                data['events'].append({'event_id': i[0], 'datetime':i[2],  'title':i[3], 'description': i[4], 'location':i[5], 'image': image, 'image_extension': image_extension})
+            try:
+                cur.execute("select * from events where id not in ('0')")
+                res = cur.fetchall()
+                result = {}
+                data['count'] = len(res)
+                data['events'] = []
+                for i in res:
+                    image = ""
+                    image_extension = ""
+                    if(i[6]): 
+                        image = bytes(i[6]).decode('utf-8')
+                        image_extension = i[7]
+                    data['events'].append({'event_id': i[0], 'datetime':i[2],  'title':i[3], 'description': i[4], 'location':i[5], 'image': image, 'image_extension': image_extension})
+            except Exception as e:
+                data['message'] = e
         # else:
             # data['Error'] = 'Invalid request!'
         return(jsonify(data)) 
@@ -222,133 +229,169 @@ class Event(Resource):
             # to be used after login code is complete
             # if(data['id'] != current_user.id):
             #     return( jsonify({'Error': 'Unauthorized user!', 'message': 'User id in request does not match user id of logged in user'}))
-            with conn.cursor() as cur:
                 # verify valid user
-                cur.execute("select id from organizers where id='{}'".format(current_user.id))
-                if(cur.fetchone() == None):
-                    return jsonify({'Error': 'Invalid user ID', 'message': 'User ID not found!'}), 201
+            output = {'data': data, 'message': message}
+            with conn.cursor() as cur:
+                try:
+                    cur.execute("select id from organizers where id='{}'".format(current_user.id))
+                    if(cur.fetchone() == None):
+                        return jsonify({'Error': 'Invalid user ID', 'message': 'User ID not found!'}), 201
+                except Exception as e:
+                    message = e
+                    return(output)
+                    cur.close()
+            if(data['Operation'] == 'List'):
+                # List events
+                with conn.cursor() as cur:
+                    try:
+                        cur.execute("select * from events where id='{}'".format(current_user.id))
+                        res = cur.fetchall()
+                        result = {}
+                        data['count'] = len(res)
+                        data['events'] = []
+                        for i in res:
+                            # image_url = ""
+                            # if(i[6]):
+                            #     image_base64 = base64.b64encode(i[6]).decode('utf-8')
+                            #     image_url = f'data:image/{i[7]};base64,{image_base64}'
+                            # data['events'].append({'event_id': i[0], 'id': i[1], 'datetime':i[2], 'title': i[3], 'description': i[4], 'location':i[5], 'image': image_url})
+                            image = ""
+                            image_extension = ""
+                            if(i[6]): 
+                                image = bytes(i[6]).decode('utf-8')
+                                image_extension = i[7]
+                            data['events'].append({'event_id': i[0], 'datetime':i[2],  'title':i[3], 'description': i[4], 'location':i[5], 'image': image, 'image_extension': image_extension})
+                    except Exception as e:
+                        message = e
+                        return(output)
 
-                if(data['Operation'] == 'List'):
-                    # List events
-                    cur.execute("select * from events where id='{}'".format(current_user.id))
-                    res = cur.fetchall()
-                    result = {}
-                    data['count'] = len(res)
-                    data['events'] = []
-                    for i in res:
-                        # image_url = ""
-                        # if(i[6]):
-                        #     image_base64 = base64.b64encode(i[6]).decode('utf-8')
-                        #     image_url = f'data:image/{i[7]};base64,{image_base64}'
-                        # data['events'].append({'event_id': i[0], 'id': i[1], 'datetime':i[2], 'title': i[3], 'description': i[4], 'location':i[5], 'image': image_url})
-                        image = ""
+            elif(data['Operation'] == 'Create'):
+                # Create new event
+                # get new event_id
+                with conn.cursor() as cur:
+                    try:
+                        cur.execute("Select max(event_id) from events")
+                        event_id = int(cur.fetchone()[0]) + 1
+                        print(event_id)
+                        # check if event with same name already exists
+                        cur.execute("select event_id from events where title='{}'".format(data['title']))
+                        if(cur.fetchone() is not None):
+                            return jsonify({'Error': 'Unable to create Event', 'message': 'Event with same name already exists!'})
+                        
+                        image_data = "NULL"
+                        image_extension = "NULL"
+                        # image_file = request.files.get('image')
+                        # if image_file is not None:
+                        #     image_data = image_file.read()
+                        #     image_filename = image_file.filename
+                        #     image_extension = os.path.splitext(image_filename)[1]
+                        if('image' in data.keys()):
+                            image_data = data['image']
+                            image_extension = data['image_extension']
+                        print(event_id, data['id'], data['datetime'], data['title'], data['description'], data['location'], image_data, image_extension)
+                        # if all checks successful, inserting event
+                        insert_query = "INSERT INTO events VALUES(%s, %s, %s, %s, %s, %s, %s, %s)"
+                        print(insert_query)
+                        cur.execute(insert_query, (event_id, data['id'], data['datetime'], data['title'], data['description'], data['location'], image_data, image_extension))
+                        # check if insertion was successful
+                        if(cur.rowcount > 0):
+                            print("successful insertion of event {}".format(event_id))
+                            # commit the transaction
+                            conn.commit()
+                            return( jsonify({'message': 'Event {} successfully created!'.format(event_id)}))
+                        else:
+                            message = "Unable to create event '{}'!".format(data['title'])
+                    except Exception as e:
+                        message = e
+                        return(output)
+                        cur.close()
+
+
+            elif(data['Operation'] == 'Update'):
+                # break
+                with conn.cursor() as cur:
+                    try:
+                        message = 'Update not yet available for use'
+                        event_id = data['event_id']
+                        cur.execute("select event_id from events where title='{}'".format(data['title']))
+                        # if(cur.fetchone() is not None):
+                        #     return jsonify({'Error': 'Unable to create Event', 'message': 'Event with same name already exists!'})
+                        # print(data)
+                        image_data = ""
                         image_extension = ""
-                        if(i[6]): 
-                            image = bytes(i[6]).decode('utf-8')
-                            image_extension = i[7]
-                        data['events'].append({'event_id': i[0], 'datetime':i[2],  'title':i[3], 'description': i[4], 'location':i[5], 'image': image, 'image_extension': image_extension})
+                        # image_file = request.files.get('image')
+                        # if image_file is not None:
+                        #     image_data = image_file.read()
+                        #     image_filename = image_file.filename
+                        #     image_extension = os.path.splitext(image_filename)[1]
+                        #     image_file.save('./test_image.png')
+                        if('image' in data.keys()):
+                            image_data = data['image']
+                            image_extension = data['image_extension']
+                        # if all checks successful, inserting event
+                        insert_query = "UPDATE events SET id=%s, datetime=%s, title=%s, description=%s, location=%s, image=%s, image_extension=%s WHERE event_id=%s"
+                        cur.execute(insert_query, (data['id'], data['datetime'], data['title'], data['description'], data['location'], image_data, image_extension, event_id))
+                        # check if insertion was successful
+                        if(cur.rowcount > 0):
+                            print("successful updation of event {}".format(event_id))
+                            # commit the transaction
+                            conn.commit()
+                            return( jsonify({'message': 'Event {} successfully updated!'.format(event_id)}))
+                        else:
+                            message = "Unable to update event '{}'!".format(data['title'])
+                    except Exception as e:
+                        message = e
+                        return(output)
+                        cur.close()
 
-                elif(data['Operation'] == 'Create'):
-                    # Create new event
-                    # get new event_id
-                    cur.execute("Select max(event_id) from events")
-                    event_id = int(cur.fetchone()[0]) + 1
-                
-                    # check if event with same name already exists
-                    cur.execute("select event_id from events where title='{}'".format(data['title']))
-                    if(cur.fetchone() is not None):
-                        return jsonify({'Error': 'Unable to create Event', 'message': 'Event with same name already exists!'})
-                    
-                    image_data = "NULL"
-                    image_extension = "NULL"
-                    # image_file = request.files.get('image')
-                    # if image_file is not None:
-                    #     image_data = image_file.read()
-                    #     image_filename = image_file.filename
-                    #     image_extension = os.path.splitext(image_filename)[1]
-                    if('image' in data.keys()):
-                        image_data = data['image']
-                        image_extension = data['image_extension']
-                    print(event_id, data['id'], data['datetime'], data['title'], data['description'], data['location'], image_data, image_extension)
-                    # if all checks successful, inserting event
-                    insert_query = "INSERT INTO events VALUES(%s, %s, %s, %s, %s, %s, %s, %s)"
-                    cur.execute(insert_query, (event_id, data['id'], data['datetime'], data['title'], data['description'], data['location'], image_data, image_extension))
-                    # check if insertion was successful
-                    if(cur.rowcount > 0):
-                        print("successful insertion of event {}".format(event_id))
-                        # commit the transaction
-                        conn.commit()
-                        return( jsonify({'message': 'Event {} successfully created!'.format(event_id)}))
-                    else:
-                        message = "Unable to create event '{}'!".format(data['title'])
-
-                elif(data['Operation'] == 'Update'):
-                    # break
-                    message = 'Update not yet available for use'
-                    event_id = data['event_id']
-                    cur.execute("select event_id from events where title='{}'".format(data['title']))
-                    # if(cur.fetchone() is not None):
-                    #     return jsonify({'Error': 'Unable to create Event', 'message': 'Event with same name already exists!'})
-                    # print(data)
-                    image_data = ""
-                    image_extension = ""
-                    # image_file = request.files.get('image')
-                    # if image_file is not None:
-                    #     image_data = image_file.read()
-                    #     image_filename = image_file.filename
-                    #     image_extension = os.path.splitext(image_filename)[1]
-                    #     image_file.save('./test_image.png')
-                    if('image' in data.keys()):
-                        image_data = data['image']
-                        image_extension = data['image_extension']
-                    # if all checks successful, inserting event
-                    insert_query = "UPDATE events SET id=%s, datetime=%s, title=%s, description=%s, location=%s, image=%s, image_extension=%s WHERE event_id=%s"
-                    cur.execute(insert_query, (data['id'], data['datetime'], data['title'], data['description'], data['location'], image_data, image_extension, event_id))
-                    # check if insertion was successful
-                    if(cur.rowcount > 0):
-                        print("successful updation of event {}".format(event_id))
-                        # commit the transaction
-                        conn.commit()
-                        return( jsonify({'message': 'Event {} successfully updated!'.format(event_id)}))
-                    else:
-                        message = "Unable to update event '{}'!".format(data['title'])
-
-                elif(data['Operation'] == 'Delete'):
-                    cur.execute("Delete From events Where event_id='{}'".format(data['event_id']))
-                    if(cur.rowcount != 0):
-                        message = 'Event successfully deleted!'
-                        conn.commit()
-                    else:
-                        message = 'Error, Unable to delete event!'
-                else: 
-                    message = 'Invalid Operation Specified'
+            elif(data['Operation'] == 'Delete'):
+                with conn.cursor() as cur:
+                    try:
+                        cur.execute("Delete From events Where event_id='{}'".format(data['event_id']))
+                        if(cur.rowcount != 0):
+                            message = 'Event successfully deleted!'
+                            conn.commit()
+                        else:
+                            message = 'Error, Unable to delete event!'
+                    except Exception as e:
+                        message = e
+                        return(output)
+                        cur.close()
+            else: 
+                message = 'Invalid Operation Specified'
 
         # the following causes an error
         # return jsonify({'data': data, 'message': message}), 200
-        return jsonify({'data': data, 'message': message})
+        return jsonify(output)
         
 
 class Organizer(Resource):
     def get(self, name):
         with conn.cursor() as cur:
-            cur.execute("select username, displayname, about, profile_image, image_extension from organizers where username = %s", (name))
-            data = {}
-            res = cur.fetchall()
-            if(cur.rowcount > 0):
-                data['message'] = "Found!"
-                data['organizer'] = {'name': res[0], 'display_name':res[1], 'about': res[2]}
-                # If it there is an image
-                if(res[3]):
-                    # return createCombinedEventDataAndImage(data, res[3], res[4])
-                    image = ""
-                    image_extension = ""
-                    if(i[6]): 
-                        image = bytes(i[4]).decode('utf-8')
-                        image_extension = i[3]
-                        data['profile'] = {'image': image, 'image_extension': image_extension}
-            else:
-                data['message'] = 'Invalid request!'
+            try:
+                cur.execute("select username, displayname, about, profile_image, image_extension from organizers where username = %s", (name))
+                data = {}
+                res = cur.fetchall()
+                if(cur.rowcount > 0):
+                    data['message'] = "Found!"
+                    data['organizer'] = {'name': res[0], 'display_name':res[1], 'about': res[2]}
+                    # If it there is an image
+                    if(res[3]):
+                        # return createCombinedEventDataAndImage(data, res[3], res[4])
+                        image = ""
+                        image_extension = ""
+                        if(i[6]): 
+                            image = bytes(i[4]).decode('utf-8')
+                            image_extension = i[3]
+                            data['profile'] = {'image': image, 'image_extension': image_extension}
+                else:
+                    data['message'] = 'Invalid request!'
+            except Exception as e:
+                # message = e
+                # return(output)
+                cur.close()
         return(jsonify(data))
+
     @login_required 
     def post(self):
         try:
@@ -455,13 +498,17 @@ class Departments(Resource):
     def get(self):
         data = {}
         with conn.cursor() as cur:
-            cur.execute("select * from depts")
-            res = cur.fetchall()
-            result = {}
-            data['count'] = len(res)
-            data['depts'] = []
-            for i in res:
-                data['depts'].append({'id': i[0], 'x':i[1],  'y':i[2], 'name': i[3]})
+            try:
+                cur.execute("select * from depts")
+                res = cur.fetchall()
+                result = {}
+                data['count'] = len(res)
+                data['depts'] = []
+                for i in res:
+                    data['depts'].append({'id': i[0], 'x':i[1],  'y':i[2], 'name': i[3]})
+            except Exception as e:
+                data['message'] = e
+                cur.close()
         # else:
             # data['Error'] = 'Invalid request!'
         return(jsonify(data)) 

@@ -457,7 +457,7 @@ class User(UserMixin):
     @staticmethod
     def get_by_username(username):
         with conn.cursor() as cur:
-            cur.execute("SELECT * FROM organizers WHERE username = %s", (username,))
+            cur.execute("SELECT * FROM organizers WHERE username = %s", (username))
             row = cur.fetchone()
             if row is not None:
                 return User(id=row[0], username=row[1], password=row[3])
@@ -467,7 +467,7 @@ class User(UserMixin):
     @staticmethod
     def get_by_id(id):
         with conn.cursor() as cur:
-            cur.execute("SELECT * FROM organizers WHERE id = %s", (id,))
+            cur.execute("SELECT * FROM organizers WHERE id = %s", (id))
             row = cur.fetchone()
             if row is not None:
                 return User(id=row[0], username=row[1], password=row[3])
